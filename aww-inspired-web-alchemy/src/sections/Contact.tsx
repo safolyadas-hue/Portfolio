@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import MagneticButton from "@/components/MagneticButton";
+
+const FORMSPREE_URL = "https://formspree.io/f/xkoppyvn";
 
 const contactInfo = [
   { label: "University", value: "SRM University AP" },
@@ -9,7 +11,32 @@ const contactInfo = [
 ];
 
 export default function Contact() {
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setStatus("sending");
+
+    const form = e.currentTarget;
+    const data = new FormData(form);
+
+    try {
+      const res = await fetch(FORMSPREE_URL, {
+        method: "POST",
+        body: data,
+        headers: { Accept: "application/json" },
+      });
+
+      if (res.ok) {
+        setStatus("sent");
+        form.reset();
+      } else {
+        setStatus("error");
+      }
+    } catch {
+      setStatus("error");
+    }
+  };
 
   return (
     <section id="contact" className="relative flex min-h-screen flex-col justify-between px-8 py-32">
@@ -32,20 +59,21 @@ export default function Contact() {
 
       {/* Contact form */}
       <div className="mt-16 max-w-xl">
-        {submitted ? (
+        {status === "sent" ? (
           <div className="border border-primary/30 bg-primary/5 p-10 text-center">
             <div className="font-serif text-3xl text-primary">Message Sent</div>
             <p className="mt-3 text-sm text-foreground/70">
               Thank you for reaching out! I'll get back to you soon.
             </p>
+            <button
+              onClick={() => setStatus("idle")}
+              className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-primary underline underline-offset-4 transition-colors hover:text-foreground"
+            >
+              Send another message
+            </button>
           </div>
         ) : (
-          <form
-            action="https://formspree.io/f/xkoppyvn"
-            method="POST"
-            onSubmit={() => setSubmitted(true)}
-            className="space-y-6"
-          >
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
                 htmlFor="name"
@@ -58,7 +86,8 @@ export default function Contact() {
                 id="name"
                 name="name"
                 required
-                className="w-full border border-border bg-transparent px-4 py-3 font-sans text-foreground outline-none transition-colors focus:border-primary"
+                disabled={status === "sending"}
+                className="w-full border border-border bg-transparent px-4 py-3 font-sans text-foreground outline-none transition-colors focus:border-primary disabled:opacity-50"
               />
             </div>
             <div>
@@ -73,7 +102,8 @@ export default function Contact() {
                 id="email"
                 name="_replyto"
                 required
-                className="w-full border border-border bg-transparent px-4 py-3 font-sans text-foreground outline-none transition-colors focus:border-primary"
+                disabled={status === "sending"}
+                className="w-full border border-border bg-transparent px-4 py-3 font-sans text-foreground outline-none transition-colors focus:border-primary disabled:opacity-50"
               />
             </div>
             <div>
@@ -88,15 +118,24 @@ export default function Contact() {
                 name="message"
                 rows={5}
                 required
-                className="w-full resize-y border border-border bg-transparent px-4 py-3 font-sans text-foreground outline-none transition-colors focus:border-primary"
+                disabled={status === "sending"}
+                className="w-full resize-y border border-border bg-transparent px-4 py-3 font-sans text-foreground outline-none transition-colors focus:border-primary disabled:opacity-50"
               />
             </div>
+
+            {status === "error" && (
+              <div className="border border-red-500/30 bg-red-500/5 px-4 py-3 font-mono text-[10px] uppercase tracking-[0.2em] text-red-400">
+                Something went wrong. Please try again or email me directly.
+              </div>
+            )}
+
             <button
               type="submit"
+              disabled={status === "sending"}
               data-cursor="hover"
-              className="w-full border border-primary bg-primary px-8 py-4 font-mono text-[10px] uppercase tracking-[0.3em] text-primary-foreground transition-all hover:bg-transparent hover:text-primary"
+              className="w-full border border-primary bg-primary px-8 py-4 font-mono text-[10px] uppercase tracking-[0.3em] text-primary-foreground transition-all hover:bg-transparent hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Send Message
+              {status === "sending" ? "Sending..." : "Send Message"}
             </button>
           </form>
         )}
